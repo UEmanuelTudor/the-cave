@@ -26,12 +26,37 @@ const bookingOptions = [
     },
 ];
 
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+function getNights(checkIn: string, checkOut: string) {
+    if (!checkIn || !checkOut) {
+        return 0;
+    }
+
+    const [startYear, startMonth, startDay] = checkIn.split("-").map(Number);
+    const [endYear, endMonth, endDay] = checkOut.split("-").map(Number);
+
+    const start = Date.UTC(startYear, startMonth - 1, startDay);
+    const end = Date.UTC(endYear, endMonth - 1, endDay);
+
+    return Math.max(0, Math.round((end - start) / DAY_IN_MS));
+}
+
 export function BookingSelector() {
     const [selectedId, setSelectedId] = useState("apartment-110");
+
+    const [checkIn, setCheckIn] = useState("");
+    const [checkOut, setCheckOut] = useState("");
 
     const selectedOption = bookingOptions.find(
         (option) => option.id === selectedId,
     )!;
+
+    const nights = getNights(checkIn, checkOut);
+    const cleaningFee = selectedOption.id === "both" && nights > 0 ? 100 : 0;
+    const accommodationTotal = nights * selectedOption.price;
+    const total = accommodationTotal + cleaningFee;
+    const hasInvalidDates = checkIn !== "" && checkOut !== "" && nights === 0;
 
     return (
         <section
@@ -40,7 +65,6 @@ export function BookingSelector() {
         >
             {bookingOptions.map((option) => {
                 const isSelected = selectedId === option.id;
-
                 return (
                     <article
                         key={option.id}
@@ -79,28 +103,35 @@ export function BookingSelector() {
             })}
             <div
                 aria-live="polite"
-                className="flex flex-col justify-between gap-4 border-t border-black/10 pt-6 md:col-span-3 md:flex-row md:items-center"
+                className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-[1fr_auto]"
             >
                 <div>
                     <p className="text-sm text-black/55">Ai selectat</p>
                     <p className="mt-1 text-xl font-semibold">{selectedOption.name}</p>
 
-                    {selectedOption.id === "both" && (
-                        <p className="mt-1 text-sm text-[#a33b20]">
-                            + 100 lei taxă unică de curățenie
-                        </p>
-                    )}
+                    <div className="mt-4 space-y-1 text-sm text-black/65">
+                        <p>{nights} {nights === 1 ? "noapte" : "nopți"}</p>
+                        <p>Cazare: {accommodationTotal} lei</p>
+
+                        {cleaningFee > 0 && (
+                            <p className="text-[#a33b20]">
+                                Taxă unică de curățenie: {cleaningFee} lei
+                            </p>
+                        )}
+                    </div>
                 </div>
 
-                <p className="text-right">
-                    <strong className="text-2xl">{selectedOption.price} lei</strong>
-                    <span className="block text-sm text-black/55">pe noapte</span>
+                <p className="text-left md:text-right">
+                    <strong className="text-2xl">{total} lei</strong>
+                    <span className="block text-sm text-black/55">total rezervare</span>
                 </p>
             </div>
             <div className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-2">
                 <label className="text-sm font-semibold">
                     Check-in
                     <input
+                        value={checkIn}
+                        onChange={(event) => setCheckIn(event.target.value)}
                         type="date"
                         name="checkIn"
                         required
@@ -111,13 +142,20 @@ export function BookingSelector() {
                 <label className="text-sm font-semibold">
                     Check-out
                     <input
+                        value={checkOut}
+                        onChange={(event) => setCheckOut(event.target.value)}
                         type="date"
                         name="checkOut"
                         required
                         className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
                     />
                 </label>
+                {hasInvalidDates && (
+                    <p className="text-sm font-semibold text-[#a33b20] md:col-span-2">
+                        Data de check-out trebuie să fie după data de check-in.
+                    </p>
+                )}
             </div>
-        </section>
+        </section >
     );
 }

@@ -47,6 +47,7 @@ export function BookingSelector() {
 
     const [checkIn, setCheckIn] = useState("");
     const [checkOut, setCheckOut] = useState("");
+    const [guestCount, setGuestCount] = useState(1);
 
     const selectedOption = bookingOptions.find(
         (option) => option.id === selectedId,
@@ -57,6 +58,24 @@ export function BookingSelector() {
     const accommodationTotal = nights * selectedOption.price;
     const total = accommodationTotal + cleaningFee;
     const hasInvalidDates = checkIn !== "" && checkOut !== "" && nights === 0;
+    function handleOptionSelect(optionId: string) {
+        const nextOption = bookingOptions.find((option) => option.id === optionId)!;
+
+        setSelectedId(optionId);
+        setGuestCount((currentGuests) => Math.min(currentGuests, nextOption.guests));
+    }
+
+    function handleGuestChange(value: string) {
+        const nextGuestCount = Number(value);
+
+        if (!Number.isFinite(nextGuestCount)) {
+            return;
+        }
+
+        setGuestCount(
+            Math.min(Math.max(Math.floor(nextGuestCount), 1), selectedOption.guests),
+        );
+    }
 
     return (
         <section
@@ -92,7 +111,7 @@ export function BookingSelector() {
                             <button
                                 type="button"
                                 aria-pressed={isSelected}
-                                onClick={() => setSelectedId(option.id)}
+                                onClick={() => handleOptionSelect(option.id)}
                                 className="rounded-md bg-[#174f3a] px-4 py-3 font-semibold text-white hover:bg-[#103b2b]"
                             >
                                 {isSelected ? "Selectat" : "Alege"}
@@ -110,7 +129,10 @@ export function BookingSelector() {
                     <p className="mt-1 text-xl font-semibold">{selectedOption.name}</p>
 
                     <div className="mt-4 space-y-1 text-sm text-black/65">
-                        <p>{nights} {nights === 1 ? "noapte" : "nopți"}</p>
+                        <p>
+                            {guestCount} {guestCount === 1 ? "oaspete" : "oaspeți"} din maximum{" "}
+                            {selectedOption.guests}
+                        </p>
                         <p>Cazare: {accommodationTotal} lei</p>
 
                         {cleaningFee > 0 && (
@@ -126,7 +148,7 @@ export function BookingSelector() {
                     <span className="block text-sm text-black/55">total rezervare</span>
                 </p>
             </div>
-            <div className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-2">
+            <div className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-3">
                 <label className="text-sm font-semibold">
                     Check-in
                     <input
@@ -151,10 +173,28 @@ export function BookingSelector() {
                     />
                 </label>
                 {hasInvalidDates && (
-                    <p className="text-sm font-semibold text-[#a33b20] md:col-span-2">
+                    <p className="text-sm font-semibold text-[#a33b20] md:col-span-3">
                         Data de check-out trebuie să fie după data de check-in.
                     </p>
+
                 )}
+                <label className="text-sm font-semibold">
+                    Oaspeți
+                    <input
+                        value={guestCount}
+                        onChange={(event) => handleGuestChange(event.target.value)}
+                        type="number"
+                        name="guests"
+                        min={1}
+                        max={selectedOption.guests}
+                        step={1}
+                        required
+                        className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
+                    />
+                    <span className="mt-2 block text-xs font-normal text-black/55">
+                        Maximum {selectedOption.guests} persoane pentru această opțiune.
+                    </span>
+                </label>
             </div>
         </section >
     );

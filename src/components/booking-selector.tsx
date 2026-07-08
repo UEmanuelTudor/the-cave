@@ -274,6 +274,48 @@ export function BookingSelector() {
                         </span>
                     </label>
 
+                    <div className="rounded-md border border-black/10 bg-[#f7f2ea] p-4 text-sm text-black/70 md:col-span-2">
+                        <p className="font-semibold text-black">Rezumat rezervare</p>
+
+                        <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                            <div>
+                                <dt className="text-black/50">Spațiu</dt>
+                                <dd className="font-medium text-black">{selectedOption.name}</dd>
+                            </div>
+
+                            <div>
+                                <dt className="text-black/50">Perioadă</dt>
+                                <dd className="font-medium text-black">
+                                    {checkIn} - {checkOut}
+                                </dd>
+                            </div>
+
+                            <div>
+                                <dt className="text-black/50">Oaspeți</dt>
+                                <dd className="font-medium text-black">{guestCount}</dd>
+                            </div>
+
+                            <div>
+                                <dt className="text-black/50">Nopți</dt>
+                                <dd className="font-medium text-black">{nights}</dd>
+                            </div>
+
+                            <div>
+                                <dt className="text-black/50">Cazare</dt>
+                                <dd className="font-medium text-black">{accommodationTotal} lei</dd>
+                            </div>
+
+                            <div>
+                                <dt className="text-black/50">Curățenie</dt>
+                                <dd className="font-medium text-black">{cleaningFee} lei</dd>
+                            </div>
+                        </dl>
+
+                        <p className="mt-4 border-t border-black/10 pt-3 text-base font-semibold text-black">
+                            Total: {total} lei
+                        </p>
+                    </div>
+
                     <div className="md:col-span-2">
                         <button
                             type="submit"

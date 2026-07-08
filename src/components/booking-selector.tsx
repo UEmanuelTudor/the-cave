@@ -49,6 +49,7 @@ export function BookingSelector() {
     const [checkOut, setCheckOut] = useState("");
     const [guestCount, setGuestCount] = useState(1);
     const [showGuestDetails, setShowGuestDetails] = useState(false);
+    const [isSubmitted, setIsSubmitted] = useState(false);
     const selectedOption = bookingOptions.find(
         (option) => option.id === selectedId,
     )!;
@@ -220,8 +221,10 @@ export function BookingSelector() {
             {showGuestDetails && canContinue && (
                 <form
                     className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-2"
-                    onSubmit={(event) => event.preventDefault()}
-                >
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        setIsSubmitted(true);
+                    }}                >
                     <label className="text-sm font-semibold">
                         Nume
                         <input
@@ -319,11 +322,21 @@ export function BookingSelector() {
                     <div className="md:col-span-2">
                         <button
                             type="submit"
-                            className="h-12 rounded-md bg-black px-6 font-semibold text-white transition hover:bg-black/80"
+                            disabled={isSubmitted}
+                            className="h-12 rounded-md bg-black px-6 font-semibold text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:bg-black/20 disabled:text-black/45"
                         >
-                            Trimite datele
+                            {isSubmitted ? "Date primite" : "Trimite datele"}
                         </button>
                     </div>
+                    {isSubmitted && (
+                        <p
+                            role="status"
+                            className="rounded-md border border-[#174f3a]/20 bg-[#174f3a]/10 p-4 text-sm font-medium text-[#174f3a] md:col-span-2"
+                        >
+                            Datele au fost salvate temporar. Următorul pas este verificarea
+                            disponibilității și plata.
+                        </p>
+                    )}
                 </form>
             )}
         </section >

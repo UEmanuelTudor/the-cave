@@ -59,6 +59,7 @@ export function BookingSelector() {
     const accommodationTotal = nights * selectedOption.price;
     const total = accommodationTotal + cleaningFee;
     const hasInvalidDates = checkIn !== "" && checkOut !== "" && nights === 0;
+    const hasSelectedDates = nights > 0;
     const canContinue =
         checkIn !== "" &&
         checkOut !== "" &&
@@ -83,13 +84,37 @@ export function BookingSelector() {
             Math.min(Math.max(Math.floor(nextGuestCount), 1), selectedOption.guests),
         );
     }
+    function handleDateChange(field: "checkIn" | "checkOut", value: string) {
+        if (field === "checkIn") {
+            setCheckIn(value);
+        } else {
+            setCheckOut(value);
+        }
+
+        setShowGuestDetails(false);
+        setIsSubmitted(false);
+    }
+
 
     return (
         <section
             id="optiuni"
             className="mx-auto grid max-w-6xl gap-5 px-6 pb-20 md:grid-cols-3"
         >
-            {bookingOptions.map((option) => {
+            <div className="rounded-md border border-black/10 bg-white p-6 md:col-span-3">
+                <p className="text-sm text-black/55">Primul pas</p>
+                <h2 className="mt-2 text-2xl font-semibold">Alege perioada șederii</h2>
+                <p className="mt-2 text-sm text-black/60">
+                    După ce alegi check-in și check-out, vezi ce opțiuni sunt disponibile.
+                </p>
+            </div>
+
+            {!hasSelectedDates && (
+                <p className="rounded-md border border-black/10 bg-[#f7f2ea] p-4 text-sm text-black/65 md:col-span-3">
+                    Selectează datele pentru a vedea disponibilitatea apartamentelor.
+                </p>
+            )}
+            {hasSelectedDates && bookingOptions.map((option) => {
                 const isSelected = selectedId === option.id;
                 return (
                     <article
@@ -127,41 +152,44 @@ export function BookingSelector() {
                     </article>
                 );
             })}
-            <div
-                aria-live="polite"
-                className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-[1fr_auto]"
-            >
-                <div>
-                    <p className="text-sm text-black/55">Ai selectat</p>
-                    <p className="mt-1 text-xl font-semibold">{selectedOption.name}</p>
+            {hasSelectedDates && (
+                <div
 
-                    <div className="mt-4 space-y-1 text-sm text-black/65">
-                        <p>{nights} {nights === 1 ? "noapte" : "nopți"}</p>
-                        <p>
-                            {guestCount} {guestCount === 1 ? "oaspete" : "oaspeți"} din maximum{" "}
-                            {selectedOption.guests}
-                        </p>
-                        <p>Cazare: {accommodationTotal} lei</p>
+                    aria-live="polite"
+                    className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-[1fr_auto]"
+                >
+                    <div>
+                        <p className="text-sm text-black/55">Ai selectat</p>
+                        <p className="mt-1 text-xl font-semibold">{selectedOption.name}</p>
 
-                        {cleaningFee > 0 && (
-                            <p className="text-[#a33b20]">
-                                Taxă unică de curățenie: {cleaningFee} lei
+                        <div className="mt-4 space-y-1 text-sm text-black/65">
+                            <p>{nights} {nights === 1 ? "noapte" : "nopți"}</p>
+                            <p>
+                                {guestCount} {guestCount === 1 ? "oaspete" : "oaspeți"} din maximum{" "}
+                                {selectedOption.guests}
                             </p>
-                        )}
-                    </div>
-                </div>
+                            <p>Cazare: {accommodationTotal} lei</p>
 
-                <p className="text-left md:text-right">
-                    <strong className="text-2xl">{total} lei</strong>
-                    <span className="block text-sm text-black/55">total rezervare</span>
-                </p>
-            </div>
+                            {cleaningFee > 0 && (
+                                <p className="text-[#a33b20]">
+                                    Taxă unică de curățenie: {cleaningFee} lei
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <p className="text-left md:text-right">
+                        <strong className="text-2xl">{total} lei</strong>
+                        <span className="block text-sm text-black/55">total rezervare</span>
+                    </p>
+                </div>
+            )}
             <div className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-3">
                 <label className="text-sm font-semibold">
                     Check-in
                     <input
                         value={checkIn}
-                        onChange={(event) => setCheckIn(event.target.value)}
+                        onChange={(event) => handleDateChange("checkIn", event.target.value)}
                         type="date"
                         name="checkIn"
                         required
@@ -173,7 +201,7 @@ export function BookingSelector() {
                     Check-out
                     <input
                         value={checkOut}
-                        onChange={(event) => setCheckOut(event.target.value)}
+                        onChange={(event) => handleDateChange("checkOut", event.target.value)}
                         type="date"
                         name="checkOut"
                         required

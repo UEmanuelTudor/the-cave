@@ -58,6 +58,12 @@ export function BookingSelector() {
     const accommodationTotal = nights * selectedOption.price;
     const total = accommodationTotal + cleaningFee;
     const hasInvalidDates = checkIn !== "" && checkOut !== "" && nights === 0;
+    const canContinue =
+        checkIn !== "" &&
+        checkOut !== "" &&
+        nights > 0 &&
+        guestCount >= 1 &&
+        guestCount <= selectedOption.guests;
     function handleOptionSelect(optionId: string) {
         const nextOption = bookingOptions.find((option) => option.id === optionId)!;
 
@@ -129,6 +135,7 @@ export function BookingSelector() {
                     <p className="mt-1 text-xl font-semibold">{selectedOption.name}</p>
 
                     <div className="mt-4 space-y-1 text-sm text-black/65">
+                        <p>{nights} {nights === 1 ? "noapte" : "nopți"}</p>
                         <p>
                             {guestCount} {guestCount === 1 ? "oaspete" : "oaspeți"} din maximum{" "}
                             {selectedOption.guests}
@@ -195,6 +202,19 @@ export function BookingSelector() {
                         Maximum {selectedOption.guests} persoane pentru această opțiune.
                     </span>
                 </label>
+                <div className="md:col-span-3">
+                    <button
+                        type="button"
+                        disabled={!canContinue}
+                        className="h-12 rounded-md bg-[#174f3a] px-6 font-semibold text-white transition hover:bg-[#103b2b] disabled:cursor-not-allowed disabled:bg-black/20 disabled:text-black/45"
+                    >
+                        Continuă rezervarea
+                    </button>
+
+                    <p className="mt-3 text-sm text-black/55">
+                        Disponibilitatea va fi verificată înainte de plata finală.
+                    </p>
+                </div>
             </div>
         </section >
     );

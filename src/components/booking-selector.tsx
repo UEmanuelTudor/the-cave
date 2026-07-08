@@ -48,7 +48,7 @@ export function BookingSelector() {
     const [checkIn, setCheckIn] = useState("");
     const [checkOut, setCheckOut] = useState("");
     const [guestCount, setGuestCount] = useState(1);
-
+    const [showGuestDetails, setShowGuestDetails] = useState(false);
     const selectedOption = bookingOptions.find(
         (option) => option.id === selectedId,
     )!;
@@ -206,6 +206,7 @@ export function BookingSelector() {
                     <button
                         type="button"
                         disabled={!canContinue}
+                        onClick={() => setShowGuestDetails(true)}
                         className="h-12 rounded-md bg-[#174f3a] px-6 font-semibold text-white transition hover:bg-[#103b2b] disabled:cursor-not-allowed disabled:bg-black/20 disabled:text-black/45"
                     >
                         Continuă rezervarea
@@ -216,6 +217,73 @@ export function BookingSelector() {
                     </p>
                 </div>
             </div>
+            {showGuestDetails && canContinue && (
+                <form
+                    className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-2"
+                    onSubmit={(event) => event.preventDefault()}
+                >
+                    <label className="text-sm font-semibold">
+                        Nume
+                        <input
+                            type="text"
+                            name="lastName"
+                            required
+                            className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
+                        />
+                    </label>
+
+                    <label className="text-sm font-semibold">
+                        Prenume
+                        <input
+                            type="text"
+                            name="firstName"
+                            required
+                            className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
+                        />
+                    </label>
+
+                    <label className="text-sm font-semibold">
+                        Email
+                        <input
+                            type="email"
+                            name="email"
+                            required
+                            className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
+                        />
+                    </label>
+
+                    <label className="text-sm font-semibold">
+                        Telefon
+                        <input
+                            type="tel"
+                            name="phone"
+                            required
+                            className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
+                        />
+                    </label>
+
+                    <label className="flex items-start gap-3 text-sm text-black/70 md:col-span-2">
+                        <input
+                            type="checkbox"
+                            name="termsAccepted"
+                            required
+                            className="mt-1 h-4 w-4"
+                        />
+                        <span>
+                            Accept termenii și condițiile rezervării și politica de anulare.
+                        </span>
+                    </label>
+
+                    <div className="md:col-span-2">
+                        <button
+                            type="submit"
+                            className="h-12 rounded-md bg-black px-6 font-semibold text-white transition hover:bg-black/80"
+                        >
+                            Trimite datele
+                        </button>
+                    </div>
+                </form>
+            )}
         </section >
     );
 }

@@ -80,3 +80,4 @@ Consultă secțiunea „Informații încă neconfirmate” din `PROJECT.md`.
 
 ```powershell
 npm run dev
+```

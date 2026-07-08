@@ -108,7 +108,68 @@ export function BookingSelector() {
                     După ce alegi check-in și check-out, vezi ce opțiuni sunt disponibile.
                 </p>
             </div>
+            <div className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-3">
+                <label className="text-sm font-semibold">
+                    Check-in
+                    <input
+                        value={checkIn}
+                        onChange={(event) => handleDateChange("checkIn", event.target.value)}
+                        type="date"
+                        name="checkIn"
+                        required
+                        className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
+                    />
+                </label>
 
+                <label className="text-sm font-semibold">
+                    Check-out
+                    <input
+                        value={checkOut}
+                        onChange={(event) => handleDateChange("checkOut", event.target.value)}
+                        type="date"
+                        name="checkOut"
+                        required
+                        className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
+                    />
+                </label>
+                {hasInvalidDates && (
+                    <p className="text-sm font-semibold text-[#a33b20] md:col-span-3">
+                        Data de check-out trebuie să fie după data de check-in.
+                    </p>
+
+                )}
+                <label className="text-sm font-semibold">
+                    Oaspeți
+                    <input
+                        value={guestCount}
+                        onChange={(event) => handleGuestChange(event.target.value)}
+                        type="number"
+                        name="guests"
+                        min={1}
+                        max={selectedOption.guests}
+                        step={1}
+                        required
+                        className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
+                    />
+                    <span className="mt-2 block text-xs font-normal text-black/55">
+                        Maximum {selectedOption.guests} persoane pentru această opțiune.
+                    </span>
+                </label>
+                <div className="md:col-span-3">
+                    <button
+                        type="button"
+                        disabled={!canContinue}
+                        onClick={() => setShowGuestDetails(true)}
+                        className="h-12 rounded-md bg-[#174f3a] px-6 font-semibold text-white transition hover:bg-[#103b2b] disabled:cursor-not-allowed disabled:bg-black/20 disabled:text-black/45"
+                    >
+                        Continuă rezervarea
+                    </button>
+
+                    <p className="mt-3 text-sm text-black/55">
+                        Disponibilitatea va fi verificată înainte de plata finală.
+                    </p>
+                </div>
+            </div>
             {!hasSelectedDates && (
                 <p className="rounded-md border border-black/10 bg-[#f7f2ea] p-4 text-sm text-black/65 md:col-span-3">
                     Selectează datele pentru a vedea disponibilitatea apartamentelor.
@@ -184,68 +245,7 @@ export function BookingSelector() {
                     </p>
                 </div>
             )}
-            <div className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-3">
-                <label className="text-sm font-semibold">
-                    Check-in
-                    <input
-                        value={checkIn}
-                        onChange={(event) => handleDateChange("checkIn", event.target.value)}
-                        type="date"
-                        name="checkIn"
-                        required
-                        className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
-                    />
-                </label>
 
-                <label className="text-sm font-semibold">
-                    Check-out
-                    <input
-                        value={checkOut}
-                        onChange={(event) => handleDateChange("checkOut", event.target.value)}
-                        type="date"
-                        name="checkOut"
-                        required
-                        className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
-                    />
-                </label>
-                {hasInvalidDates && (
-                    <p className="text-sm font-semibold text-[#a33b20] md:col-span-3">
-                        Data de check-out trebuie să fie după data de check-in.
-                    </p>
-
-                )}
-                <label className="text-sm font-semibold">
-                    Oaspeți
-                    <input
-                        value={guestCount}
-                        onChange={(event) => handleGuestChange(event.target.value)}
-                        type="number"
-                        name="guests"
-                        min={1}
-                        max={selectedOption.guests}
-                        step={1}
-                        required
-                        className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
-                    />
-                    <span className="mt-2 block text-xs font-normal text-black/55">
-                        Maximum {selectedOption.guests} persoane pentru această opțiune.
-                    </span>
-                </label>
-                <div className="md:col-span-3">
-                    <button
-                        type="button"
-                        disabled={!canContinue}
-                        onClick={() => setShowGuestDetails(true)}
-                        className="h-12 rounded-md bg-[#174f3a] px-6 font-semibold text-white transition hover:bg-[#103b2b] disabled:cursor-not-allowed disabled:bg-black/20 disabled:text-black/45"
-                    >
-                        Continuă rezervarea
-                    </button>
-
-                    <p className="mt-3 text-sm text-black/55">
-                        Disponibilitatea va fi verificată înainte de plata finală.
-                    </p>
-                </div>
-            </div>
             {showGuestDetails && canContinue && (
                 <form
                     className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-2"

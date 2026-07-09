@@ -42,6 +42,21 @@ function getNights(checkIn: string, checkOut: string) {
     return Math.max(0, Math.round((end - start) / DAY_IN_MS));
 }
 
+function getDateInputValue(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+function addDaysToDateInputValue(value: string, days: number) {
+    const [year, month, day] = value.split("-").map(Number);
+    const date = new Date(year, month - 1, day + days);
+
+    return getDateInputValue(date);
+}
+
 export function BookingSelector() {
     const [selectedId, setSelectedId] = useState("apartment-110");
 
@@ -60,6 +75,8 @@ export function BookingSelector() {
     const total = accommodationTotal + cleaningFee;
     const hasInvalidDates = checkIn !== "" && checkOut !== "" && nights === 0;
     const hasSelectedDates = nights > 0;
+    const today = getDateInputValue();
+    const minCheckOut = checkIn ? addDaysToDateInputValue(checkIn, 1) : today;
     const canContinue =
         checkIn !== "" &&
         checkOut !== "" &&
@@ -117,6 +134,7 @@ export function BookingSelector() {
                         type="date"
                         name="checkIn"
                         required
+                        min={today}
                         className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
                     />
                 </label>
@@ -129,6 +147,7 @@ export function BookingSelector() {
                         type="date"
                         name="checkOut"
                         required
+                        min={minCheckOut}
                         className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
                     />
                 </label>
@@ -184,40 +203,40 @@ export function BookingSelector() {
                 );
             })}
             {hasSelectedDates && (
-  <>
-                            <label className="text-sm font-semibold">
-                    Oaspeți
-                    <input
-                        value={guestCount}
-                        onChange={(event) => handleGuestChange(event.target.value)}
-                        type="number"
-                        name="guests"
-                        min={1}
-                        max={selectedOption.guests}
-                        step={1}
-                        required
-                        className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
-                    />
-                    <span className="mt-2 block text-xs font-normal text-black/55">
-                        Maximum {selectedOption.guests} persoane pentru această opțiune.
-                    </span>
-                </label>
-                <div className="md:col-span-3">
-                    <button
-                        type="button"
-                        disabled={!canContinue}
-                        onClick={() => setShowGuestDetails(true)}
-                        className="h-12 rounded-md bg-[#174f3a] px-6 font-semibold text-white transition hover:bg-[#103b2b] disabled:cursor-not-allowed disabled:bg-black/20 disabled:text-black/45"
-                    >
-                        Continuă rezervarea
-                    </button>
+                <>
+                    <label className="text-sm font-semibold">
+                        Oaspeți
+                        <input
+                            value={guestCount}
+                            onChange={(event) => handleGuestChange(event.target.value)}
+                            type="number"
+                            name="guests"
+                            min={1}
+                            max={selectedOption.guests}
+                            step={1}
+                            required
+                            className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
+                        />
+                        <span className="mt-2 block text-xs font-normal text-black/55">
+                            Maximum {selectedOption.guests} persoane pentru această opțiune.
+                        </span>
+                    </label>
+                    <div className="md:col-span-3">
+                        <button
+                            type="button"
+                            disabled={!canContinue}
+                            onClick={() => setShowGuestDetails(true)}
+                            className="h-12 rounded-md bg-[#174f3a] px-6 font-semibold text-white transition hover:bg-[#103b2b] disabled:cursor-not-allowed disabled:bg-black/20 disabled:text-black/45"
+                        >
+                            Continuă rezervarea
+                        </button>
 
-                    <p className="mt-3 text-sm text-black/55">
-                        Disponibilitatea va fi verificată înainte de plata finală.
-                    </p>
-                </div>
-                  </>
-)}
+                        <p className="mt-3 text-sm text-black/55">
+                            Disponibilitatea va fi verificată înainte de plata finală.
+                        </p>
+                    </div>
+                </>
+            )}
             {hasSelectedDates && (
                 <div
 

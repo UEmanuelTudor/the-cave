@@ -2,6 +2,17 @@
 
 import { useState } from "react";
 
+type BookingOptionId = "apartment-110" | "penthouse" | "both";
+
+const blockedPeriods: Array<{
+    optionId: Exclude<BookingOptionId, "both">;
+    checkIn: string;
+    checkOut: string;
+}> = [
+        { optionId: "apartment-110", checkIn: "2026-07-18", checkOut: "2026-07-21" },
+        { optionId: "penthouse", checkIn: "2026-07-24", checkOut: "2026-07-26" },
+    ];
+
 const bookingOptions = [
     {
         id: "apartment-110",
@@ -57,6 +68,34 @@ function addDaysToDateInputValue(value: string, days: number) {
     return getDateInputValue(date);
 }
 
+function isRangeOverlapping(
+    checkIn: string,
+    checkOut: string,
+    blockedCheckIn: string,
+    blockedCheckOut: string,
+) {
+    return checkIn < blockedCheckOut && checkOut > blockedCheckIn;
+}
+
+function isBookingOptionAvailable(
+    optionId: BookingOptionId,
+    checkIn: string,
+    checkOut: string,
+) {
+    if (getNights(checkIn, checkOut) === 0) {
+        return false;
+    }
+
+    const optionIdsToCheck =
+        optionId === "both" ? ["apartment-110", "penthouse"] : [optionId];
+
+    return !blockedPeriods.some(
+        (period) =>
+            optionIdsToCheck.includes(period.optionId) &&
+            isRangeOverlapping(checkIn, checkOut, period.checkIn, period.checkOut),
+    );
+}
+
 export function BookingSelector() {
     const [selectedId, setSelectedId] = useState("apartment-110");
 
@@ -77,6 +116,13 @@ export function BookingSelector() {
     const hasSelectedDates = nights > 0;
     const today = getDateInputValue();
     const minCheckOut = checkIn ? addDaysToDateInputValue(checkIn, 1) : today;
+    const availabilityByOptionId = Object.fromEntries(
+        bookingOptions.map((option) => [
+            option.id,
+            isBookingOptionAvailable(option.id as BookingOptionId, checkIn, checkOut),
+        ]),
+    ) as Record<BookingOptionId, boolean>;
+
     const canContinue =
         checkIn !== "" &&
         checkOut !== "" &&
@@ -166,6 +212,7 @@ export function BookingSelector() {
             )}
             {hasSelectedDates && bookingOptions.map((option) => {
                 const isSelected = selectedId === option.id;
+                const isAvailable = availabilityByOptionId[option.id as BookingOptionId];
                 return (
                     <article
                         key={option.id}
@@ -175,9 +222,15 @@ export function BookingSelector() {
                             }`}
                     >
                         <div>
-                            <p className="text-sm text-black/55">
-                                Maximum {option.guests} persoane
-                            </p>
+                            <div className="text-sm">
+                                <p className="text-black/55">Maximum {option.guests} persoane</p>
+                                <p
+                                    className={`mt-2 font-semibold ${isAvailable ? "text-[#174f3a]" : "text-[#a33b20]"
+                                        }`}
+                                >
+                                    {isAvailable ? "Disponibil pentru perioada aleasă" : "Ocupat în perioada aleasă"}
+                                </p>
+                            </div>
                             <h2 className="mt-3 text-2xl font-semibold">{option.name}</h2>
                             <p className="mt-3 leading-7 text-black/65">
                                 {option.description}

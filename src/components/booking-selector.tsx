@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 
 import {
     bookingOptions,
@@ -24,6 +24,17 @@ type AvailabilityResult = {
 type AvailabilityError = {
     checkIn: string;
     checkOut: string;
+};
+
+type ReservationStatus = "idle" | "submitting" | "success" | "error";
+
+type ReservationResponse = {
+    reservation?: {
+        reservationId: number;
+        status: "pending";
+        total: number;
+    };
+    error?: string;
 };
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -95,7 +106,10 @@ export function BookingSelector() {
     const [checkOut, setCheckOut] = useState("");
     const [guestCount, setGuestCount] = useState(1);
     const [showGuestDetails, setShowGuestDetails] = useState(false);
-    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [reservationStatus, setReservationStatus] =
+        useState<ReservationStatus>("idle");
+    const [reservationMessage, setReservationMessage] = useState("");
+    const [reservationId, setReservationId] = useState<number | null>(null);
     const [availabilityResult, setAvailabilityResult] =
         useState<AvailabilityResult | null>(null);
     const [availabilityError, setAvailabilityError] =
@@ -181,6 +195,10 @@ export function BookingSelector() {
 
         setSelectedId(optionId);
         setGuestCount((currentGuests) => Math.min(currentGuests, nextOption.guests));
+        setShowGuestDetails(false);
+        setReservationStatus("idle");
+        setReservationMessage("");
+        setReservationId(null);
     }
 
     function handleGuestChange(value: string) {
@@ -203,7 +221,64 @@ export function BookingSelector() {
         }
 
         setShowGuestDetails(false);
-        setIsSubmitted(false);
+        setReservationStatus("idle");
+        setReservationMessage("");
+        setReservationId(null);
+    }
+
+    async function handleReservationSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+
+        if (!canContinue) {
+            return;
+        }
+
+        const formData = new FormData(event.currentTarget);
+
+        setReservationStatus("submitting");
+        setReservationMessage("");
+        setReservationId(null);
+
+        try {
+            const response = await fetch("/api/reservations", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    checkIn,
+                    checkOut,
+                    guestEmail: formData.get("email"),
+                    guestFirstName: formData.get("firstName"),
+                    guestLastName: formData.get("lastName"),
+                    guestPhone: formData.get("phone"),
+                    guests: guestCount,
+                    rentalOptionId: selectedOption.id,
+                    termsAccepted: formData.get("termsAccepted") === "on",
+                }),
+            });
+            const data = (await response.json()) as ReservationResponse;
+
+            if (!response.ok || !data.reservation) {
+                throw new Error(
+                    data.error ??
+                        "Rezervarea nu a putut fi salvata. Incearca din nou.",
+                );
+            }
+
+            setReservationId(data.reservation.reservationId);
+            setReservationStatus("success");
+            setReservationMessage(
+                "Rezervarea a fost inregistrata. Perioada este blocata pentru alte rezervari active.",
+            );
+        } catch (error) {
+            setReservationStatus("error");
+            setReservationMessage(
+                error instanceof Error
+                    ? error.message
+                    : "Rezervarea nu a putut fi salvata. Incearca din nou.",
+            );
+        }
     }
 
     return (
@@ -418,10 +493,7 @@ export function BookingSelector() {
             {showGuestDetails && canContinue && (
                 <form
                     className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-2"
-                    onSubmit={(event) => {
-                        event.preventDefault();
-                        setIsSubmitted(true);
-                    }}
+                    onSubmit={handleReservationSubmit}
                 >
                     <label className="text-sm font-semibold">
                         Nume
@@ -527,20 +599,36 @@ export function BookingSelector() {
                     <div className="md:col-span-2">
                         <button
                             type="submit"
-                            disabled={isSubmitted}
+                            disabled={
+                                reservationStatus === "submitting" ||
+                                reservationStatus === "success"
+                            }
                             className="h-12 rounded-md bg-black px-6 font-semibold text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:bg-black/20 disabled:text-black/45"
                         >
-                            {isSubmitted ? "Date primite" : "Trimite datele"}
+                            {reservationStatus === "submitting"
+                                ? "Se salveaza"
+                                : reservationStatus === "success"
+                                  ? "Rezervare inregistrata"
+                                  : "Trimite datele"}
                         </button>
                     </div>
 
-                    {isSubmitted && (
+                    {reservationStatus === "success" && (
                         <p
                             role="status"
                             className="rounded-md border border-[#174f3a]/20 bg-[#174f3a]/10 p-4 text-sm font-medium text-[#174f3a] md:col-span-2"
                         >
-                            Datele au fost salvate temporar. Urmatorul pas este
-                            verificarea disponibilitatii si confirmarea avansului.
+                            {reservationMessage}{" "}
+                            {reservationId ? `Numar rezervare: ${reservationId}.` : ""}
+                        </p>
+                    )}
+
+                    {reservationStatus === "error" && (
+                        <p
+                            role="alert"
+                            className="rounded-md border border-[#a33b20]/20 bg-[#a33b20]/10 p-4 text-sm font-medium text-[#a33b20] md:col-span-2"
+                        >
+                            {reservationMessage}
                         </p>
                     )}
                 </form>

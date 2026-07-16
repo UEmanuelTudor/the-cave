@@ -1,44 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-type BookingOptionId = "ibiza" | "rooftop" | "villa";
+import {
+    bookingOptions,
+    emptyAvailability,
+    type AvailabilityByOptionId,
+    type BookingOptionId,
+} from "@/lib/booking-options";
 
-const blockedPeriods: Array<{
-    optionId: Exclude<BookingOptionId, "villa">;
+type AvailabilityStatus = "idle" | "loading" | "ready" | "error";
+
+type AvailabilityResponse = {
+    availability: AvailabilityByOptionId;
+};
+
+type AvailabilityResult = {
     checkIn: string;
     checkOut: string;
-}> = [
-        { optionId: "ibiza", checkIn: "2026-07-18", checkOut: "2026-07-21" },
-        { optionId: "rooftop", checkIn: "2026-07-24", checkOut: "2026-07-26" },
-    ];
+    availability: AvailabilityByOptionId;
+};
 
-const bookingOptions = [
-    {
-        id: "ibiza",
-        name: "Apartament IBIZA",
-        description:
-            "110 mp, 2 dormitoare, 2 băi, living separat și bucătărie separată cu aragaz, potrivită pentru gătit.",
-        guests: 5,
-        price: 530,
-    },
-    {
-        id: "rooftop",
-        name: "The Rooftop",
-        description:
-            "100 mp, 2 dormitoare, 2 băi, rooftop de 80 mp și chicinetă fără plită sau aragaz, cu frigider mic, mobilier și chiuvetă.",
-        guests: 5,
-        price: 530,
-    },
-    {
-        id: "villa",
-        name: "Villa",
-        description:
-            "Ambele apartamente împreună, maximum 10 persoane, cu acces la curte și spațiile exterioare disponibile.",
-        guests: 10,
-        price: 1060,
-    },
-];
+type AvailabilityError = {
+    checkIn: string;
+    checkOut: string;
+};
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
@@ -71,46 +57,53 @@ function addDaysToDateInputValue(value: string, days: number) {
     return getDateInputValue(date);
 }
 
-function isRangeOverlapping(
-    checkIn: string,
-    checkOut: string,
-    blockedCheckIn: string,
-    blockedCheckOut: string,
+function getAvailabilityText(
+    availabilityStatus: AvailabilityStatus,
+    isAvailable: boolean,
 ) {
-    return checkIn < blockedCheckOut && checkOut > blockedCheckIn;
-}
-
-function isBookingOptionAvailable(
-    optionId: BookingOptionId,
-    checkIn: string,
-    checkOut: string,
-) {
-    if (getNights(checkIn, checkOut) === 0) {
-        return false;
+    if (availabilityStatus === "loading") {
+        return "Se verifica disponibilitatea";
     }
 
-    const optionIdsToCheck =
-        optionId === "villa" ? ["ibiza", "rooftop"] : [optionId];
+    if (availabilityStatus === "error") {
+        return "Disponibilitatea nu poate fi verificata";
+    }
 
-    return !blockedPeriods.some(
-        (period) =>
-            optionIdsToCheck.includes(period.optionId) &&
-            isRangeOverlapping(checkIn, checkOut, period.checkIn, period.checkOut),
-    );
+    return isAvailable
+        ? "Disponibil pentru perioada aleasa"
+        : "Ocupat in perioada aleasa";
+}
+
+function getAvailabilityClass(
+    availabilityStatus: AvailabilityStatus,
+    isAvailable: boolean,
+) {
+    if (availabilityStatus === "loading") {
+        return "text-black/55";
+    }
+
+    if (availabilityStatus === "error" || !isAvailable) {
+        return "text-[#a33b20]";
+    }
+
+    return "text-[#174f3a]";
 }
 
 export function BookingSelector() {
-    const [selectedId, setSelectedId] = useState("ibiza");
-
+    const [selectedId, setSelectedId] = useState<BookingOptionId>("ibiza");
     const [checkIn, setCheckIn] = useState("");
     const [checkOut, setCheckOut] = useState("");
     const [guestCount, setGuestCount] = useState(1);
     const [showGuestDetails, setShowGuestDetails] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [availabilityResult, setAvailabilityResult] =
+        useState<AvailabilityResult | null>(null);
+    const [availabilityError, setAvailabilityError] =
+        useState<AvailabilityError | null>(null);
+
     const selectedOption = bookingOptions.find(
         (option) => option.id === selectedId,
     )!;
-
     const nights = getNights(checkIn, checkOut);
     const cleaningFee = selectedOption.id === "villa" && nights > 0 ? 100 : 0;
     const accommodationTotal = nights * selectedOption.price;
@@ -119,14 +112,25 @@ export function BookingSelector() {
     const hasSelectedDates = nights > 0;
     const today = getDateInputValue();
     const minCheckOut = checkIn ? addDaysToDateInputValue(checkIn, 1) : today;
-    const availabilityByOptionId = Object.fromEntries(
-        bookingOptions.map((option) => [
-            option.id,
-            isBookingOptionAvailable(option.id as BookingOptionId, checkIn, checkOut),
-        ]),
-    ) as Record<BookingOptionId, boolean>;
+    const hasAvailabilityForSelectedDates =
+        availabilityResult?.checkIn === checkIn &&
+        availabilityResult?.checkOut === checkOut;
+    const hasErrorForSelectedDates =
+        availabilityError?.checkIn === checkIn && availabilityError?.checkOut === checkOut;
+    const availabilityStatus: AvailabilityStatus = !hasSelectedDates
+        ? "idle"
+        : hasAvailabilityForSelectedDates
+          ? "ready"
+          : hasErrorForSelectedDates
+            ? "error"
+            : "loading";
+    const availabilityByOptionId = hasAvailabilityForSelectedDates
+        ? availabilityResult.availability
+        : emptyAvailability;
     const selectedOptionIsAvailable =
-        hasSelectedDates && availabilityByOptionId[selectedOption.id as BookingOptionId];
+        hasSelectedDates &&
+        availabilityStatus === "ready" &&
+        availabilityByOptionId[selectedOption.id];
 
     const canContinue =
         checkIn !== "" &&
@@ -135,7 +139,44 @@ export function BookingSelector() {
         selectedOptionIsAvailable &&
         guestCount >= 1 &&
         guestCount <= selectedOption.guests;
-    function handleOptionSelect(optionId: string) {
+
+    useEffect(() => {
+        if (!hasSelectedDates) {
+            return;
+        }
+
+        const controller = new AbortController();
+
+        fetch(`/api/availability?checkIn=${checkIn}&checkOut=${checkOut}`, {
+            signal: controller.signal,
+        })
+            .then(async (response) => {
+                if (!response.ok) {
+                    throw new Error("Availability request failed.");
+                }
+
+                return (await response.json()) as AvailabilityResponse;
+            })
+            .then((data) => {
+                setAvailabilityResult({
+                    availability: data.availability,
+                    checkIn,
+                    checkOut,
+                });
+                setAvailabilityError(null);
+            })
+            .catch((error: Error) => {
+                if (error.name === "AbortError") {
+                    return;
+                }
+
+                setAvailabilityError({ checkIn, checkOut });
+            });
+
+        return () => controller.abort();
+    }, [checkIn, checkOut, hasSelectedDates]);
+
+    function handleOptionSelect(optionId: BookingOptionId) {
         const nextOption = bookingOptions.find((option) => option.id === optionId)!;
 
         setSelectedId(optionId);
@@ -153,6 +194,7 @@ export function BookingSelector() {
             Math.min(Math.max(Math.floor(nextGuestCount), 1), selectedOption.guests),
         );
     }
+
     function handleDateChange(field: "checkIn" | "checkOut", value: string) {
         if (field === "checkIn") {
             setCheckIn(value);
@@ -164,7 +206,6 @@ export function BookingSelector() {
         setIsSubmitted(false);
     }
 
-
     return (
         <section
             id="optiuni"
@@ -172,11 +213,15 @@ export function BookingSelector() {
         >
             <div className="rounded-md border border-black/10 bg-white p-6 md:col-span-3">
                 <p className="text-sm text-black/55">Primul pas</p>
-                <h2 className="mt-2 text-2xl font-semibold">Alege perioada șederii</h2>
+                <h2 className="mt-2 text-2xl font-semibold">
+                    Alege perioada sederii
+                </h2>
                 <p className="mt-2 text-sm text-black/60">
-                    După ce alegi check-in și check-out, vezi ce opțiuni sunt disponibile.
+                    Dupa ce alegi check-in si check-out, vezi ce optiuni sunt
+                    disponibile.
                 </p>
             </div>
+
             <div className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-3">
                 <label className="text-sm font-semibold">
                     Check-in
@@ -203,69 +248,93 @@ export function BookingSelector() {
                         className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
                     />
                 </label>
+
                 {hasInvalidDates && (
                     <p className="text-sm font-semibold text-[#a33b20] md:col-span-3">
-                        Data de check-out trebuie să fie după data de check-in.
+                        Data de check-out trebuie sa fie dupa data de check-in.
                     </p>
-
                 )}
-
             </div>
+
             {!hasSelectedDates && (
                 <p className="rounded-md border border-black/10 bg-[#f7f2ea] p-4 text-sm text-black/65 md:col-span-3">
-                    Selectează datele pentru a vedea disponibilitatea apartamentelor.
+                    Selecteaza datele pentru a vedea disponibilitatea apartamentelor.
                 </p>
             )}
-            {hasSelectedDates && bookingOptions.map((option) => {
-                const isSelected = selectedId === option.id;
-                const isAvailable = availabilityByOptionId[option.id as BookingOptionId];
-                return (
-                    <article
-                        key={option.id}
-                        className={`flex min-h-64 flex-col justify-between rounded-md border bg-white p-6 ${isSelected
-                            ? "border-[#174f3a] ring-2 ring-[#174f3a]/15"
-                            : "border-black/10"
+
+            {hasSelectedDates &&
+                bookingOptions.map((option) => {
+                    const isSelected = selectedId === option.id;
+                    const isAvailable =
+                        availabilityStatus === "ready" && availabilityByOptionId[option.id];
+                    const availabilityText = getAvailabilityText(
+                        availabilityStatus,
+                        isAvailable,
+                    );
+                    const availabilityClass = getAvailabilityClass(
+                        availabilityStatus,
+                        isAvailable,
+                    );
+
+                    return (
+                        <article
+                            key={option.id}
+                            className={`flex min-h-64 flex-col justify-between rounded-md border bg-white p-6 ${
+                                isSelected
+                                    ? "border-[#174f3a] ring-2 ring-[#174f3a]/15"
+                                    : "border-black/10"
                             }`}
-                    >
-                        <div>
-                            <div className="text-sm">
-                                <p className="text-black/55">Maximum {option.guests} persoane</p>
-                                <p
-                                    className={`mt-2 font-semibold ${isAvailable ? "text-[#174f3a]" : "text-[#a33b20]"
-                                        }`}
-                                >
-                                    {isAvailable ? "Disponibil pentru perioada aleasă" : "Ocupat în perioada aleasă"}
+                        >
+                            <div>
+                                <div className="text-sm">
+                                    <p className="text-black/55">
+                                        Maximum {option.guests} persoane
+                                    </p>
+                                    <p className={`mt-2 font-semibold ${availabilityClass}`}>
+                                        {availabilityText}
+                                    </p>
+                                </div>
+
+                                <h2 className="mt-3 text-2xl font-semibold">
+                                    {option.name}
+                                </h2>
+                                <p className="mt-3 leading-7 text-black/65">
+                                    {option.description}
                                 </p>
                             </div>
-                            <h2 className="mt-3 text-2xl font-semibold">{option.name}</h2>
-                            <p className="mt-3 leading-7 text-black/65">
-                                {option.description}
-                            </p>
-                        </div>
 
-                        <div className="mt-8 flex items-end justify-between">
-                            <p>
-                                <strong className="text-2xl">{option.price} lei</strong>
-                                <span className="block text-sm text-black/55">pe noapte</span>
-                            </p>
+                            <div className="mt-8 flex items-end justify-between">
+                                <p>
+                                    <strong className="text-2xl">{option.price} lei</strong>
+                                    <span className="block text-sm text-black/55">
+                                        pe noapte
+                                    </span>
+                                </p>
 
-                            <button
-                                type="button"
-                                aria-pressed={isSelected}
-                                disabled={!isAvailable}
-                                onClick={() => handleOptionSelect(option.id)}
-                                className="rounded-md bg-[#174f3a] px-4 py-3 font-semibold text-white hover:bg-[#103b2b] disabled:cursor-not-allowed disabled:bg-black/20 disabled:text-black/45"
-                            >
-                                {!isAvailable ? "Indisponibil" : isSelected ? "Selectat" : "Alege"}
-                            </button>
-                        </div>
-                    </article>
-                );
-            })}
+                                <button
+                                    type="button"
+                                    aria-pressed={isSelected}
+                                    disabled={!isAvailable}
+                                    onClick={() => handleOptionSelect(option.id)}
+                                    className="rounded-md bg-[#174f3a] px-4 py-3 font-semibold text-white hover:bg-[#103b2b] disabled:cursor-not-allowed disabled:bg-black/20 disabled:text-black/45"
+                                >
+                                    {availabilityStatus === "loading"
+                                        ? "Verificare"
+                                        : !isAvailable
+                                          ? "Indisponibil"
+                                          : isSelected
+                                            ? "Selectat"
+                                            : "Alege"}
+                                </button>
+                            </div>
+                        </article>
+                    );
+                })}
+
             {hasSelectedDates && (
                 <>
                     <label className="text-sm font-semibold">
-                        Oaspeți
+                        Oaspeti
                         <input
                             value={guestCount}
                             onChange={(event) => handleGuestChange(event.target.value)}
@@ -278,9 +347,11 @@ export function BookingSelector() {
                             className="mt-2 block h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal"
                         />
                         <span className="mt-2 block text-xs font-normal text-black/55">
-                            Maximum {selectedOption.guests} persoane pentru această opțiune.
+                            Maximum {selectedOption.guests} persoane pentru aceasta
+                            optiune.
                         </span>
                     </label>
+
                     <div className="md:col-span-3">
                         <button
                             type="button"
@@ -288,20 +359,27 @@ export function BookingSelector() {
                             onClick={() => setShowGuestDetails(true)}
                             className="h-12 rounded-md bg-[#174f3a] px-6 font-semibold text-white transition hover:bg-[#103b2b] disabled:cursor-not-allowed disabled:bg-black/20 disabled:text-black/45"
                         >
-                            Continuă rezervarea
+                            Continua rezervarea
                         </button>
 
                         <p className="mt-3 text-sm text-black/55">
-                            {selectedOptionIsAvailable
-                                ? "Disponibilitatea va fi verificată înainte de confirmarea finală."
-                                : "Alege o opțiune disponibilă pentru perioada selectată."}
+                            {availabilityStatus === "loading" &&
+                                "Verificam disponibilitatea pentru perioada selectata."}
+                            {availabilityStatus === "error" &&
+                                "Nu am putut verifica disponibilitatea. Incearca din nou."}
+                            {availabilityStatus === "ready" &&
+                                selectedOptionIsAvailable &&
+                                "Disponibilitatea va fi verificata inainte de confirmarea finala."}
+                            {availabilityStatus === "ready" &&
+                                !selectedOptionIsAvailable &&
+                                "Alege o optiune disponibila pentru perioada selectata."}
                         </p>
                     </div>
                 </>
             )}
+
             {hasSelectedDates && selectedOptionIsAvailable && (
                 <div
-
                     aria-live="polite"
                     className="grid gap-4 border-t border-black/10 pt-6 md:col-span-3 md:grid-cols-[1fr_auto]"
                 >
@@ -310,16 +388,19 @@ export function BookingSelector() {
                         <p className="mt-1 text-xl font-semibold">{selectedOption.name}</p>
 
                         <div className="mt-4 space-y-1 text-sm text-black/65">
-                            <p>{nights} {nights === 1 ? "noapte" : "nopți"}</p>
                             <p>
-                                {guestCount} {guestCount === 1 ? "oaspete" : "oaspeți"} din maximum{" "}
+                                {nights} {nights === 1 ? "noapte" : "nopti"}
+                            </p>
+                            <p>
+                                {guestCount}{" "}
+                                {guestCount === 1 ? "oaspete" : "oaspeti"} din maximum{" "}
                                 {selectedOption.guests}
                             </p>
                             <p>Cazare: {accommodationTotal} lei</p>
 
                             {cleaningFee > 0 && (
                                 <p className="text-[#a33b20]">
-                                    Taxă unică de curățenie: {cleaningFee} lei
+                                    Taxa unica de curatenie: {cleaningFee} lei
                                 </p>
                             )}
                         </div>
@@ -327,7 +408,9 @@ export function BookingSelector() {
 
                     <p className="text-left md:text-right">
                         <strong className="text-2xl">{total} lei</strong>
-                        <span className="block text-sm text-black/55">total rezervare</span>
+                        <span className="block text-sm text-black/55">
+                            total rezervare
+                        </span>
                     </p>
                 </div>
             )}
@@ -338,7 +421,8 @@ export function BookingSelector() {
                     onSubmit={(event) => {
                         event.preventDefault();
                         setIsSubmitted(true);
-                    }}                >
+                    }}
+                >
                     <label className="text-sm font-semibold">
                         Nume
                         <input
@@ -387,7 +471,8 @@ export function BookingSelector() {
                             className="mt-1 h-4 w-4"
                         />
                         <span>
-                            Accept termenii și condițiile rezervării și politica de anulare.
+                            Accept termenii si conditiile rezervarii si politica de
+                            anulare.
                         </span>
                     </label>
 
@@ -396,35 +481,41 @@ export function BookingSelector() {
 
                         <dl className="mt-3 grid gap-2 sm:grid-cols-2">
                             <div>
-                                <dt className="text-black/50">Spațiu</dt>
-                                <dd className="font-medium text-black">{selectedOption.name}</dd>
+                                <dt className="text-black/50">Spatiu</dt>
+                                <dd className="font-medium text-black">
+                                    {selectedOption.name}
+                                </dd>
                             </div>
 
                             <div>
-                                <dt className="text-black/50">Perioadă</dt>
+                                <dt className="text-black/50">Perioada</dt>
                                 <dd className="font-medium text-black">
                                     {checkIn} - {checkOut}
                                 </dd>
                             </div>
 
                             <div>
-                                <dt className="text-black/50">Oaspeți</dt>
+                                <dt className="text-black/50">Oaspeti</dt>
                                 <dd className="font-medium text-black">{guestCount}</dd>
                             </div>
 
                             <div>
-                                <dt className="text-black/50">Nopți</dt>
+                                <dt className="text-black/50">Nopti</dt>
                                 <dd className="font-medium text-black">{nights}</dd>
                             </div>
 
                             <div>
                                 <dt className="text-black/50">Cazare</dt>
-                                <dd className="font-medium text-black">{accommodationTotal} lei</dd>
+                                <dd className="font-medium text-black">
+                                    {accommodationTotal} lei
+                                </dd>
                             </div>
 
                             <div>
-                                <dt className="text-black/50">Curățenie</dt>
-                                <dd className="font-medium text-black">{cleaningFee} lei</dd>
+                                <dt className="text-black/50">Curatenie</dt>
+                                <dd className="font-medium text-black">
+                                    {cleaningFee} lei
+                                </dd>
                             </div>
                         </dl>
 
@@ -442,17 +533,18 @@ export function BookingSelector() {
                             {isSubmitted ? "Date primite" : "Trimite datele"}
                         </button>
                     </div>
+
                     {isSubmitted && (
                         <p
                             role="status"
                             className="rounded-md border border-[#174f3a]/20 bg-[#174f3a]/10 p-4 text-sm font-medium text-[#174f3a] md:col-span-2"
                         >
-                            Datele au fost salvate temporar. Următorul pas este verificarea
-                            disponibilității și confirmarea avansului.
+                            Datele au fost salvate temporar. Urmatorul pas este
+                            verificarea disponibilitatii si confirmarea avansului.
                         </p>
                     )}
                 </form>
             )}
-        </section >
+        </section>
     );
 }

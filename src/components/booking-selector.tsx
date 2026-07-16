@@ -2,36 +2,39 @@
 
 import { useState } from "react";
 
-type BookingOptionId = "apartment-110" | "penthouse" | "both";
+type BookingOptionId = "ibiza" | "rooftop" | "villa";
 
 const blockedPeriods: Array<{
-    optionId: Exclude<BookingOptionId, "both">;
+    optionId: Exclude<BookingOptionId, "villa">;
     checkIn: string;
     checkOut: string;
 }> = [
-        { optionId: "apartment-110", checkIn: "2026-07-18", checkOut: "2026-07-21" },
-        { optionId: "penthouse", checkIn: "2026-07-24", checkOut: "2026-07-26" },
+        { optionId: "ibiza", checkIn: "2026-07-18", checkOut: "2026-07-21" },
+        { optionId: "rooftop", checkIn: "2026-07-24", checkOut: "2026-07-26" },
     ];
 
 const bookingOptions = [
     {
-        id: "apartment-110",
-        name: "Apartament 110",
-        description: "2 dormitoare, 2 băi și bucătărie separată",
+        id: "ibiza",
+        name: "Apartament IBIZA",
+        description:
+            "110 mp, 2 dormitoare, 2 băi, living separat și bucătărie separată cu aragaz, potrivită pentru gătit.",
         guests: 5,
         price: 530,
     },
     {
-        id: "penthouse",
-        name: "Penthouse Rooftop",
-        description: "2 dormitoare, rooftop de 80 mp și balcon",
+        id: "rooftop",
+        name: "The Rooftop",
+        description:
+            "100 mp, 2 dormitoare, 2 băi, rooftop de 80 mp și chicinetă fără plită sau aragaz, cu frigider mic, mobilier și chiuvetă.",
         guests: 5,
         price: 530,
     },
     {
-        id: "both",
-        name: "Proprietatea completă",
-        description: "Ambele apartamente și acces la curte",
+        id: "villa",
+        name: "Villa",
+        description:
+            "Ambele apartamente împreună, maximum 10 persoane, cu acces la curte și spațiile exterioare disponibile.",
         guests: 10,
         price: 1060,
     },
@@ -87,7 +90,7 @@ function isBookingOptionAvailable(
     }
 
     const optionIdsToCheck =
-        optionId === "both" ? ["apartment-110", "penthouse"] : [optionId];
+        optionId === "villa" ? ["ibiza", "rooftop"] : [optionId];
 
     return !blockedPeriods.some(
         (period) =>
@@ -97,7 +100,7 @@ function isBookingOptionAvailable(
 }
 
 export function BookingSelector() {
-    const [selectedId, setSelectedId] = useState("apartment-110");
+    const [selectedId, setSelectedId] = useState("ibiza");
 
     const [checkIn, setCheckIn] = useState("");
     const [checkOut, setCheckOut] = useState("");
@@ -109,7 +112,7 @@ export function BookingSelector() {
     )!;
 
     const nights = getNights(checkIn, checkOut);
-    const cleaningFee = selectedOption.id === "both" && nights > 0 ? 100 : 0;
+    const cleaningFee = selectedOption.id === "villa" && nights > 0 ? 100 : 0;
     const accommodationTotal = nights * selectedOption.price;
     const total = accommodationTotal + cleaningFee;
     const hasInvalidDates = checkIn !== "" && checkOut !== "" && nights === 0;
@@ -122,11 +125,14 @@ export function BookingSelector() {
             isBookingOptionAvailable(option.id as BookingOptionId, checkIn, checkOut),
         ]),
     ) as Record<BookingOptionId, boolean>;
+    const selectedOptionIsAvailable =
+        hasSelectedDates && availabilityByOptionId[selectedOption.id as BookingOptionId];
 
     const canContinue =
         checkIn !== "" &&
         checkOut !== "" &&
         nights > 0 &&
+        selectedOptionIsAvailable &&
         guestCount >= 1 &&
         guestCount <= selectedOption.guests;
     function handleOptionSelect(optionId: string) {
@@ -246,10 +252,11 @@ export function BookingSelector() {
                             <button
                                 type="button"
                                 aria-pressed={isSelected}
+                                disabled={!isAvailable}
                                 onClick={() => handleOptionSelect(option.id)}
-                                className="rounded-md bg-[#174f3a] px-4 py-3 font-semibold text-white hover:bg-[#103b2b]"
+                                className="rounded-md bg-[#174f3a] px-4 py-3 font-semibold text-white hover:bg-[#103b2b] disabled:cursor-not-allowed disabled:bg-black/20 disabled:text-black/45"
                             >
-                                {isSelected ? "Selectat" : "Alege"}
+                                {!isAvailable ? "Indisponibil" : isSelected ? "Selectat" : "Alege"}
                             </button>
                         </div>
                     </article>
@@ -285,12 +292,14 @@ export function BookingSelector() {
                         </button>
 
                         <p className="mt-3 text-sm text-black/55">
-                            Disponibilitatea va fi verificată înainte de plata finală.
+                            {selectedOptionIsAvailable
+                                ? "Disponibilitatea va fi verificată înainte de confirmarea finală."
+                                : "Alege o opțiune disponibilă pentru perioada selectată."}
                         </p>
                     </div>
                 </>
             )}
-            {hasSelectedDates && (
+            {hasSelectedDates && selectedOptionIsAvailable && (
                 <div
 
                     aria-live="polite"
@@ -439,7 +448,7 @@ export function BookingSelector() {
                             className="rounded-md border border-[#174f3a]/20 bg-[#174f3a]/10 p-4 text-sm font-medium text-[#174f3a] md:col-span-2"
                         >
                             Datele au fost salvate temporar. Următorul pas este verificarea
-                            disponibilității și plata.
+                            disponibilității și confirmarea avansului.
                         </p>
                     )}
                 </form>
